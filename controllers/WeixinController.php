@@ -12,7 +12,7 @@ class WeixinController extends Controller
         $signature = $_GET["signature"];
         $timestamp = $_GET["timestamp"];
         $nonce = $_GET["nonce"];
-        $token = "jsdjfucjksieFJJB90788SFF";
+        $token = Yii::$app->params['weixin_token'];
         $tmpArr = array($token, $timestamp, $nonce);
         
         sort($tmpArr, SORT_STRING);
