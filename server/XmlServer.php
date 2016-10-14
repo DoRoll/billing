@@ -1,59 +1,141 @@
 <?php
-class XML2Array {
+use yii\base\ErrorException;
+use yii\base\Object;
+class XML2Array
+{
+    private static $xml = null;
+    private static $encoding = 'UTF-8';
 
-        private static $xml = null;
-        private static $encoding = 'UTF-8';
+    /**
+     * 载入
+     * 
+     * @param string $version 版本
+     * @param string $encoding 字符编码
+     * @param string $format
+     *
+     * @author xiaoyi
+     * @date 2016年10月14日
+     */
+    public static function init($_strVersion = '1.0', $_strEncoding = 'UTF-8', $_strFormat = true)
+    {
+        self::$xml = new \DOMDocument($_strVersion, $_strEncoding);
+        self::$xml->formatOutput = $_strFormat;
+        self::$encoding = $_strEncoding;
+    }
 
-        /**
-         * Initialize the root XML node [optional]
-         * @param $version
-         * @param $encoding
-         * @param $format_output
-         */
-        public static function init($version = '1.0', $encoding = 'UTF-8', $format_output = true) {
-                self::$xml = new \DOMDocument($version, $encoding);
-                self::$xml->formatOutput = $format_output;
-                self::$encoding = $encoding;
+    /**
+     * 将一个xml 抓换为数据
+     * @param unknown $input_xml 待转换xml
+     * @throws Exception
+     *
+     * @author xiaoyi
+     * @date 2016年10月14日
+     */
+    public static function &createArray($_strXml="")
+    {
+        $objXml = self::getXMLObject();    
+        if(is_string($_strXml) && !($objXml->loadXML($_strXml)))
+        {
+            throw new ErrorException("xml 解析失败");
         }
+        else
+        {
+            if(get_class($_strXml) != "DOMDocument")
+                throw new ErrorException("xml 解析失败");
+            $objXml = self::$xml = $_strXml;
+        }
+        
+        $aryTemp[$objXml->documentElement->tagName] = self::convert($objXml->documentElement);
+        self::$xml = null;
+        return $aryTemp;
+    }
 
-        /**
-         * Convert an XML to Array
-         * @param string $node_name - name of the root node to be converted
-         * @param array $arr - aray to be converterd
-         * @return DOMDocument
-         */
-        public static function &createArray($input_xml) {
-                $xml = self::getXMLRoot();
-                if(is_string($input_xml)) {
-                        $parsed = $xml->loadXML($input_xml);
-                        if(!$parsed) {
-                                throw new Exception('[XML2Array] Error parsing the XML string.');
+    /**
+     * 转换xml实现
+     * 
+     * @param Object $_objNode
+     *
+     * @author xiaoyi
+     * @date 2016年10月14日
+     */
+    private static function &convert($_objNode)
+    {
+        $aryOutput = [];
+
+        switch ($_objNode->nodeType) {
+            case XML_CDATA_SECTION_NODE:
+                $aryOutput['@cdata'] = trim($_objNode->textContent);
+                break;
+
+            case XML_TEXT_NODE:
+                $aryOutput = trim($_objNode->textContent);
+                break;
+
+            case XML_ELEMENT_NODE:
+                for ($i=0, $m=$_objNode->childNodes->length; $i<$m; $i++)
+                {
+                    $objChild = $_objNode->childNodes->item($i);
+                    $strResult = self::convert($objChild);
+                    if(isset($objChild->tagName))
+                    {
+                        $strTagName = $objChild->tagName;
+
+                        // assume more nodes of same kind are coming
+                        if(!isset($aryOutput[$strTagName]))
+                        {
+                            $output[$strTagName] = [];
                         }
-                } else {
-                        if(get_class($input_xml) != 'DOMDocument') {
-                                throw new Exception('[XML2Array] The input XML object should be of type: DOMDocument.');
+                        $aryOutput[$strTagName][] = $strResult;
+                    }
+                    else
+                   {
+                        if($strResult !== '')
+                        {
+                            $aryOutput = $strResult;
                         }
-                        $xml = self::$xml = $input_xml;
+                    }
                 }
-                $array[$xml->documentElement->tagName] = self::convert($xml->documentElement);
-                self::$xml = null;    // clear the xml node in the class for 2nd time use.
-                return $array;
+
+                if(is_array($aryOutput))
+                {
+                    foreach ($aryOutput as $strTagName => $strValue)
+                    {
+                        if(is_array($strValue) && count($strValue)==1)
+                            $aryOutput[$strTagName] = $strValue[0];
+                    }
+                    if(empty($aryOutput))
+                        $aryOutput = '';
+                }
+
+                if($_objNode->attributes->length)
+                {
+                    $aryTemp = [];
+                    foreach($_objNode->attributes as $attrName => $attrNode)
+                    {
+                        $aryTemp[$attrName] = (string) $attrNode->value;
+                    }
+                    if(!is_array($aryOutput)) {
+                        $aryOutput = array('@value' => $aryOutput);
+                    }
+                    $aryOutput['@attributes'] = $aryTemp;
+                }
+                break;
         }
+        return $aryOutput;
+    }
 
-        /**
-         * Convert an Array to XML
-         * @param mixed $node - XML as a string or as an object of DOMDocument
-         * @return mixed
-         */
-        private static function &convert($node) {
-                $output = array();
+    /**
+     * 返回xml单例对象
+     *
+     * @author xiaoyi
+     * @date 2016年10月14日
+     */
+    private static function getXMLObject(){
+        if(empty(self::$xml)) {
+            self::init();
+        }
+        return self::$xml;
+    }
+}
 
-                switch ($node->nodeType) {
-                        case XML_CDATA_SECTION_NODE:
-                                $output['@cdata'] = trim($node->textContent);
-                                break;
-
-                        case XML_TEXT_NODE:
-                                $output = trim($node->textContent);
-                                break;
-
+?>
