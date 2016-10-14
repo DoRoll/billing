@@ -3,30 +3,32 @@
 namespace app\controllers;
 
 use yii\web\Controller;
+use Yii;
 
 class WeixinController extends Controller
 {
     public $enableCsrfValidation = false;
     public function actionIndex()
     {
-        $signature = $_GET["signature"];
-        $timestamp = $_GET["timestamp"];
-        $nonce = $_GET["nonce"];
-        $token = \Yii::$app->params['weixin_token'];
-        $tmpArr = array($token, $timestamp, $nonce);
-        
-        sort($tmpArr, SORT_STRING);
-        $tmpStr = implode( "", $tmpArr );
-        $tmpStr = sha1( $tmpStr );
+        $strParam = file_get_contents("php://input");
 
-        $objFile = fopen("a.txt", "a");
-        fwrite($objFile, $tmpStr."\r\n-------".$signature);
-        fclose($objFile);
-        
-        if( $tmpStr == $signature ){
-            echo $_GET["echostr"];exit();
-        }else{
-            return false;
-        }
+
+
+        $strUrl = "<a href='http://www.baidu.com'>菜单1</a>\r\n";
+        $strUrl .= "<a href='http://www.baidu.com'>菜单2</a>\r\n";
+        $strUrl .= "<a href='http://www.baidu.com'>菜单3</a>\r\n";
+        $strUrl .= "<a href='http://www.baidu.com'>菜单4</a>";
+
+        //Yii::$app->cache->set("aaaa", "测试存储", 3);
+        //sleep(1);
+        echo Yii::$app->cache->get("aaaa");  exit();
+/*
+       echo "<xml>
+       <ToUserName><![CDATA[".$_GET['openid']."]]></ToUserName>
+       <FromUserName><![CDATA[gh_5a05cce1d0d7]]></FromUserName>
+       <CreateTime>".time()."</CreateTime>
+       <MsgType><![CDATA[text]]></MsgType>
+       <Content><![CDATA[".$strUrl."]]></Content>
+       </xml>";exit();*/
     }
 }

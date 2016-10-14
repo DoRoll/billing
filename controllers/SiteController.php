@@ -42,6 +42,7 @@ class SiteController extends BaseController
 
     public function actionIndex()
     {
+        print_r(Yii::$app->session->get());
         return $this->render('index');
     }
 }
